@@ -177,8 +177,7 @@
      (cycle
       (setq ytel-show--index (mod new-index length)))
      ((<= 0 new-index (1- length))
-      (setq ytel-show--index new-index))
-     (t (message "Border!")))))
+      (setq ytel-show--index new-index)))))
 
 
 ;;;;; DATA
@@ -225,23 +224,33 @@
 
 (defun ytel-show-revert-buffer (&rest _)
   (interactive)
-  (let ((inhibit-read-only t))
+  (let ((inhibit-read-only t)
+        (id (ytel-show--current-video-id)))
+    (message "Loading %s..." id)
     (erase-buffer)
-    (ytel-show--draw-data (ytel-show--video-data (ytel-show--current-video-id)))
-    (goto-char (point-min))))
+    (ytel-show--draw-data (ytel-show--video-data id))
+    (goto-char (point-min))
+    (message "Showing %s..." id)))
 
 (defun ytel-show-next-video (&optional cycle)
   (interactive "P")
-  (ytel-show--update-index 1 cycle)
-  (ytel-show-revert-buffer))
+  (let ((inx ytel-show--index))
+    (ytel-show--update-index 1 cycle)
+    (if (= inx ytel-show--index)
+        (message "Wall! Use argument to cycle!")
+      (ytel-show-revert-buffer))))
 
 (defun ytel-show-previous-video (&optional cycle)
   (interactive "P")
-  (ytel-show--update-index -1 cycle)
-  (ytel-show-revert-buffer))
+  (let ((inx ytel-show--index))
+    (ytel-show--update-index -1 cycle)
+    (if (= inx ytel-show--index)
+        (message "Wall! Use argument to cycle!")
+      (ytel-show-revert-buffer))))
 
 (defun ytel-show-reload-video-data ()
   (interactive)
+  (message "Reloading %s..." (ytel-show--current-video-id))
   (ytel-show--update-cache (ytel-show--current-video-id))
   (ytel-show-revert-buffer))
 
