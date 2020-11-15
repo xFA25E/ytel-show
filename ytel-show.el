@@ -176,15 +176,24 @@
   (setq ytel-show--video-ids video-ids ytel-show--index index)
   (ytel-show-revert-buffer))
 
+(defun ytel-show--update-index (add &optional cycle)
+  (let ((new-index (+ add ytel-show--index))
+        (length (length ytel-show--video-ids)))
+    (cond
+     (cycle
+      (setq ytel-show--index (mod new-index length)))
+     ((<= 0 new-index (1- length))
+      (setq ytel-show--index new-index))
+     (t (message "Border!")))))
 
-(defun ytel-show-next-video ()
-  (interactive)
-  (setq ytel-show--index (mod (1+ ytel-show--index) (length ytel-show--video-ids)))
+(defun ytel-show-next-video (&optional cycle)
+  (interactive "P")
+  (ytel-show--update-index 1 cycle)
   (ytel-show-revert-buffer))
 
-(defun ytel-show-previous-video ()
-  (interactive)
-  (setq ytel-show--index (mod (1- ytel-show--index) (length ytel-show--video-ids)))
+(defun ytel-show-previous-video (&optional cycle)
+  (interactive "P")
+  (ytel-show--update-index -1 cycle)
   (ytel-show-revert-buffer))
 
 (define-derived-mode ytel-show-mode special-mode "Ytel-Show"
