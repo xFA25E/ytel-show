@@ -27,6 +27,12 @@
 
 ;;;; IMPORTS
 
+(require 'files)
+(require 'window)
+(require 'simple)
+(require 'subr)
+(require 'subr-x)
+(require 'seq)
 (require 'ytel)
 
 
@@ -73,9 +79,6 @@
 
 ;;;; FUNCTIONS
 
-
-;;;;; MISC
-
 (defun ytel-show--current-video-id ()
   (aref ytel-show--video-ids ytel-show--index))
 
@@ -99,11 +102,10 @@
   (cl-case (length thumbnails)
     (0 nil)
     (1 (elt thumbnails 0))
-    (t
-     (cl-labels ((height (e) (cdr (assq 'height e)))
-                 (cmp (e1 e2) (<= (height e1) (height e2)))
-                 (pred (acc elm) (if (cmp acc elm) elm acc)))
-       (seq-reduce #'pred (subseq thumbnails 1) (aref thumbnails 0))))))
+    (t (cl-labels ((height (e) (cdr (assq 'height e)))
+                   (cmp (e1 e2) (<= (height e1) (height e2)))
+                   (pred (acc elm) (if (cmp acc elm) elm acc)))
+         (seq-reduce #'pred (seq-subseq thumbnails 1) (elt thumbnails 0))))))
 
 (defun ytel-show--thumbnail-load-data (thumbnail)
   (when thumbnail
@@ -166,9 +168,8 @@
                       (puthash author-id (ytel-show--author-create)
                                ytel-show--authors-cache))
                   query-response)))
-    `((video . ,video) (author . ,author))))
+    `((id . ,id) (video . ,video) (author . ,author))))
 
-
 (defun ytel-show--update-index (add &optional cycle)
   (let ((new-index (+ add ytel-show--index))
         (length (length ytel-show--video-ids)))
@@ -185,14 +186,15 @@
   (if-let* ((video (gethash id ytel-show--videos-cache))
             (author (gethash (ytel-show--video-author-id video)
                              ytel-show--authors-cache)))
-      `((video . ,video) (author . ,author))
+      `((id . ,id) (video . ,video) (author . ,author))
     (ytel-show--update-cache id)))
 
 
 ;;;;; DRAW
 
 (defun ytel-show--draw-data (data)
-  (let* ((video (cdr (assq 'video data)))
+  (let* ((id (cdr (assq 'id data)))
+         (video (cdr (assq 'video data)))
          (title (ytel-show--video-title video))
          (thumbnail-data (ytel-show--video-thumbnail-data video))
          (description (ytel-show--video-description video))
@@ -207,7 +209,7 @@
          (name (ytel-show--author-name author))
          (author-thumbnail-data (ytel-show--author-thumbnail-data author))
          (subs (ytel-show--author-subs author)))
-    (insert (format "%s\n" title))
+    (insert (format "%s | %s\n" id title))
     (when thumbnail-data
       (insert-image thumbnail-data)
       (insert "\n"))
