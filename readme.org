@@ -1,0 +1,7 @@
+* ytel-show
+  A package that lets you view video information from [[https://github.com/gRastello/ytel][ytel]]
+* Usage
+  Call `ytel-show` from *ytel* buffer and then use `n/p` to cycle videos.
+* Note
+  It only cycles through videos from current page.  To load next page, you
+  should load it in the *ytel* buffer first and then call `ytel-show` again.
