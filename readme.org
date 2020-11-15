@@ -11,7 +11,7 @@
   - [ ] write documentation
   - [ ] add autoloads
   - [ ] add fancy graphics and styles (faces)
-  - [ ] add support for extensions :: `ytel-show` should take a buffer name
+  - [ ] add support for extensions (`ytel-show` should take a buffer name)
   - [ ] test more
   - [ ] add youtube comments
   - [X] add includes
