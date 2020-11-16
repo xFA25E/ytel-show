@@ -6,6 +6,14 @@
 * Easy setup
   ~(define-key ytel-mode-map (kbd "RET") #'ytel-show)~
 
+  *OR*
+
+  #+begin_src emacs-lisp
+    (use-package ytel-show
+      :after ytel
+      :bind (:map ytel-mode-map ("RET" . ytel-show)))
+  #+end_src
+
 * Usage
   - /n|p/ :: switch videos
   - /G/ :: to recache video information

@@ -29,6 +29,11 @@
 ;;
 ;; (define-key ytel-mode-map (kbd "RET") #'ytel-show)
 ;;
+;; OR
+;;
+;; (use-package ytel-show
+;;   :after ytel
+;;   :bind (:map ytel-mode-map ("RET" . ytel-show)))
 ;;
 ;; Usage:
 ;;
