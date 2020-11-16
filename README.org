@@ -5,10 +5,17 @@
 * Note
   It only cycles through videos from current page.  To load next page, you
   should load it in the *ytel* buffer first and then call `ytel-show` again.
-* Todo [7/11]
-  - [ ] add fancy graphics and styles with faces
+* Todo [7/12]
+  - [ ] add fancy graphics and styles with faces (update screenshot)
   - [ ] test more and run flycheck
   - [ ] improve readme (describe caveats and add screenshot, dependencies)
+  - [ ] better thumbnail selection ::
+    Sometimes maxres/maxresdefault thumbnails are empty.  During updates, if the
+    returned thumbnail is nil, and there is already a cached thumbnail, dont
+    update.
+
+    Sometimes, the author's thumbnail will be with a double-slash prefix.  Maybe
+    I should simply detect such thumbnails and prepend https: to them.
   - [ ] add youtube comments
   - [X] `ytel-show` should take a buffer name (describe this in docs)
   - [X] check `ytel-show` errors
