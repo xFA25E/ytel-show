@@ -276,7 +276,7 @@ Scale it to satisfy `YTEL-SHOW-IMAGE-MAX-WIDTH' and
   "Delete element from `THUMBNAILS' matching `THUMBNAIL's url."
   (cl-delete (alist-get 'url thumbnail) thumbnails
              :test #'string-equal
-             :key (lambda (thumbnail) (alist-get 'url thumbnail))))
+             :key (apply-partially #'alist-get 'url)))
 
 (defun ytel-show--get-thumbnail (thumbnails)
   "Select thumbnail from `THUMBNAILS' and load it's data."
