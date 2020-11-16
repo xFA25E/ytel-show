@@ -5,13 +5,13 @@
 * Note
   It only cycles through videos from current page.  To load next page, you
   should load it in the *ytel* buffer first and then call `ytel-show` again.
-* Todo [5/11]
+* Todo [7/11]
   - [ ] add fancy graphics and styles with faces
-  - [ ] check `ytel-show` errors
-  - [ ] `ytel-show` should take a buffer name (describe this in docs)
   - [ ] test more and run flycheck
   - [ ] improve readme (describe caveats and add screenshot, dependencies)
   - [ ] add youtube comments
+  - [X] `ytel-show` should take a buffer name (describe this in docs)
+  - [X] check `ytel-show` errors
   - [X] add autoloads
   - [X] write documentation
   - [X] add custom variables

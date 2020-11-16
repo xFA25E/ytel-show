@@ -123,6 +123,11 @@
   "View youtube video details from ytel."
   :group 'applications)
 
+(defcustom ytel-show-default-buffer-name "*ytel-show*"
+  "Default buffer name used when the `BUFFER' argument in `YTEL-SHOW' is nil."
+  :type 'strting
+  :group 'ytel-show)
+
 (defcustom ytel-show-image-max-width 600.0
   "Max image width.  This variable is used to scale images in buffer."
   :type 'float
@@ -354,18 +359,32 @@ data."
   (ytel-show-revert-buffer))
 
 ;;;###autoload
-(defun ytel-show (video-ids index)
+(defun ytel-show (video-ids index &optional buffer)
   "Show video information in the Ytel-Show buffer.  This is the main entry
 function for this package.  Interactively, it must be called from a `YTEL'
 buffer.
 
-`VIDEO-IDS' is a vector of strings with youtube video ids to show.  `INDEX' is
-the index of some video in `VIDEO-IDS' that will be cached and displayed first."
+`VIDEO-IDS' is a vector of strings with youtube video ids to show.
+
+`INDEX' is the index of some video in `VIDEO-IDS' that will be cached and
+displayed first.
+
+If `BUFFER' is nil, then `YTEL-SHOW-DEFAULT-BUFFER-NAME' is used.  To display
+videos from `VIDEO-IDS'."
   (interactive (if (not (derived-mode-p 'ytel-mode))
                    (error "Not in the ytel buffer")
                  (list (vconcat (seq-map #'ytel-video-id ytel-videos))
                        (1- (line-number-at-pos)))))
-  (switch-to-buffer (get-buffer-create "*ytel-show*"))
+
+  (unless (and (vectorp video-ids)
+               (seq-every-p (lambda (s) (and (stringp s) (= 11 (length s)))) video-ids)
+               (integerp index) (<= 0 index (1- (length video-ids))))
+    (error "Invalid arguments to `YTEL-SHOW'."))
+
+  (unless buffer
+    (setq buffer ytel-show-default-buffer-name))
+
+  (switch-to-buffer (get-buffer-create buffer))
   (unless (derived-mode-p 'ytel-show-mode)
     (ytel-show-mode))
   (setq ytel-show--video-ids video-ids ytel-show--index index)
