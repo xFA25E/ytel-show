@@ -35,10 +35,20 @@
 ;;   :after ytel
 ;;   :bind (:map ytel-mode-map ("RET" . ytel-show)))
 ;;
+;;
 ;; Usage:
 ;;
 ;; n/p - to switch videos
 ;; G - to recache video information
+;;
+;;
+;; Customization:
+;;
+;; Default buffer name: `YTEL-SHOW-DEFAULT-BUFFER-NAME'.
+;;
+;; Thumbnail sizes: `YTEL-SHOW-IMAGE-MAX-WIDTH' `YTEL-SHOW-IMAGE-MAX-HEIGHT'
+;;
+;; Faces: `YTEL-SHOW-VIDEO-LIKES-FACE' `YTEL-SHOW-AUTHOR-SUBS-FACE'
 ;;
 ;;
 ;; Note:

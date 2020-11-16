@@ -18,6 +18,13 @@
   - /n|p/ :: switch videos
   - /G/ :: to recache video information
 
+* Customization
+  Default buffer name: ~ytel-show-default-buffer-name~.
+
+  Thumbnail sizes: ~ytel-show-image-max-width~, ~ytel-show-image-max-height~
+
+  Faces: ~ytel-show-video-likes-face~, ~ytel-show-author-subs-face~
+
 * Extensibility
   You can easily extend this package for showing videos from other places.  Just
   give ~ytel-show~ function a ~buffer~ argument and your vector of ~video-ids~
