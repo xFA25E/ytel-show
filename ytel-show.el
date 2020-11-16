@@ -3,7 +3,10 @@
 ;; Copyright (C) 2020  Valeriy Litkovskyy
 
 ;; Author: Valeriy Litkovskyy
-;; Keywords: multimedia
+;; Keywords: youtube multimedia
+;; Version: 0.1.0
+;; URL: https://github.com/xFA25E/ytel-show
+;; Package-Requires: ((ytel "0.1.0") (emacs "26.1"))
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -195,20 +198,15 @@ Some urls might be without \"https:\" or \"https://i.ytimg.com\" prefix.  Detect
 these urls and try to repair them."
   (let* ((id (ytel-show--current-video-id))
          (single-slash-rx (rx bos "/vi/" (literal id) "/maxres.jpg" eos)))
-    (cl-labels ((repair-single-slash (thumbnail)
-                 (when-let ((url (alist-get 'url thumbnail)))
-                   (when (string-match-p single-slash-rx url)
-                     (setf (alist-get 'url thumbnail)
-                           (concat "https://i.ytimg.com" url))))
-                 thumbnail)
-                (repair-double-slash (thumbnail)
-                 (let ((url (alist-get 'url thumbnail)))
-                   (when (string-match-p (rx bos "//yt3.ggpht.com") url)
-                     (setf (alist-get 'url thumbnail) (concat "https:" url))))
-                 thumbnail)
-                (repair (thumbnail)
-                 (repair-single-slash (repair-double-slash thumbnail))))
-      (seq-map #'repair thumbnails))))
+    (seq-map
+     (lambda (thumbnail)
+       (let-alist thumbnail
+         (cond ((string-match-p single-slash-rx .url)
+                (setf (alist-get 'url thumbnail) (concat "https://i.ytimg.com" .url)))
+               ((string-match-p (rx bos "//yt3.ggpht.com") .url)
+                (setf (alist-get 'url thumbnail) (concat "https:" .url)))))
+       thumbnail)
+     thumbnails)))
 
 (defun ytel-show--filter-thumbnails (thumbnails)
   "Filter `THUMBNAILS' from invidious response.
@@ -223,68 +221,82 @@ sequence with alists with the following properties:
   width and height
 
     number greater than 0"
-  (cl-flet ((valid-thumbnail-p (thumbnail)
-             (let-alist thumbnail
-               (and (numberp .width) (< 0 .width)
-                    (numberp .height) (< 0 .height)
-                    (stringp .url) (not (string-empty-p .url))
-                    (string-match-p (rx bos "http" (? "s") "://") .url)
-                    (not (string-match-p (regexp-quote ytel-invidious-api-url) .url))))))
-    (seq-filter #'valid-thumbnail-p thumbnails)))
+  (seq-filter
+   (lambda (thumbnail)
+     (let-alist thumbnail
+       (and (numberp .width) (< 0 .width)
+            (numberp .height) (< 0 .height)
+            (stringp .url) (not (string-empty-p .url))
+            (string-match-p (rx bos "http" (? "s") "://") .url)
+            (not (string-match-p (regexp-quote ytel-invidious-api-url) .url)))))
+   thumbnails))
 
-(defun ytel-show--select-thumbnail (thumbnails)
-  "Select thumbnail from `THUMBNAILS' with the biggest height."
-  (cl-case (length thumbnails)
-    (0 nil)
-    (1 (elt thumbnails 0))
-    (t (cl-labels ((height (e) (alist-get 'height e))
-                   (cmp (e1 e2) (<= (height e1) (height e2)))
-                   (pred (acc elm) (if (cmp acc elm) elm acc)))
-         (seq-reduce #'pred (seq-subseq thumbnails 1) (elt thumbnails 0))))))
+(defun ytel-show--retrieve-image (url)
+  "Synchronously retrieve image from `URL'.
+On 404 return :not-found."
+  (let ((buffer (url-retrieve-synchronously url)))
+    (unwind-protect
+        (with-current-buffer buffer
+          (goto-char (point-min))
+          (if (search-forward "HTTP/1.1 404" nil t)
+              :not-found
+            (search-forward "\n\n")
+            (buffer-substring (point) (point-max))))
+      (kill-buffer buffer))))
+
+(defun ytel-show--valid-image-sizes-p (width height)
+  "Check whether `WIDTH' and `HEIGHT' are smaller than max allowed values."
+  (or (< ytel-show-image-max-width width) (< ytel-show-image-max-height height)))
+
+(defun ytel-show--scale-images-sizes (width height)
+  "Scale `WIDTH' and `HEIGHT' to fit max allowed values."
+  (min (/ ytel-show-image-max-width width) (/ ytel-show-image-max-height height)))
 
 (defun ytel-show--thumbnail-load-data (thumbnail)
   "Load image data from `THUMBNAIL's url.
 Scale it to satisfy `YTEL-SHOW-IMAGE-MAX-WIDTH' and
 `YTEL-SHOW-IMAGE-MAX-HEIGHT'."
   (when thumbnail
-    (cl-flet ((scale (width height)
-               (when (or (< ytel-show-image-max-width width)
-                         (< ytel-show-image-max-height height))
-                 (list :scale (min (/ ytel-show-image-max-width width)
-                                   (/ ytel-show-image-max-height height))))))
-      (let-alist thumbnail
-        (let ((buffer (url-retrieve-synchronously .url)))
-          (unwind-protect
-              (let ((data (with-current-buffer buffer
-                            (goto-char (point-min))
-                            (if (search-forward "HTTP/1.1 404" nil t)
-                                :not-found
-                              (search-forward "\n\n")
-                              (buffer-substring (point) (point-max))))))
-                (if (eq :not-found data)
-                    data
-                  (apply #'create-image data nil t (scale .width .height))))
-            (kill-buffer buffer)))))))
+    (let-alist thumbnail
+      (let ((data (ytel-show--retrieve-image .url)))
+        (cond ((eq :not-found data) data)
+              ((ytel-show--valid-image-sizes-p .width .height)
+               (create-image
+                data nil t :scale (ytel-show--scale-images-sizes .width .height)))
+              (t (create-image data nil t)))))))
+
+(defun ytel-show--select-thumbnail (thumbnails)
+  "Select thumbnail from `THUMBNAILS' with the biggest height."
+  (seq-reduce
+   (lambda (thumbnail next)
+     (if (<= (alist-get 'height thumbnail) (alist-get 'height next))
+         next
+       thumbnail))
+   (seq-subseq thumbnails 1) (elt thumbnails 0)))
+
+(defun ytel-show--delete-thumbnail (thumbnail thumbnails)
+  "Delete element from `THUMBNAILS' matching `THUMBNAIL's url."
+  (cl-delete (alist-get 'url thumbnail) thumbnails
+             :test #'string-equal
+             :key (lambda (thumbnail) (alist-get 'url thumbnail))))
+
+(defun ytel-show--get-thumbnail (thumbnails)
+  "Select thumbnail from `THUMBNAILS' and load it's data."
+  (cl-case (length thumbnails)
+    (0 nil)
+    (1 (elt thumbnails 0))
+    (t (let* ((thumbnail (ytel-show--select-thumbnail thumbnails))
+              (data (ytel-show--thumbnail-load-data thumbnail)))
+         (if (and (not (eq :not-found data)) data) data
+           (ytel-show--get-thumbnail
+            (ytel-show--delete-thumbnail thumbnail thumbnails)))))))
 
 (defun ytel-show--process-thumbnails (thumbnails)
   "Repair `THUMBNAILS' | filter | select | load."
-  (let* ((thumbnails (thread-last thumbnails
-                       ytel-show--repair-thumbnail-urls
-                       ytel-show--filter-thumbnails))
-         thumbnail data)
-
-    (setf thumbnail (ytel-show--select-thumbnail thumbnails)
-          data (ytel-show--thumbnail-load-data thumbnail))
-
-    (while (and thumbnails (or (eq :not-found data) (null data)))
-
-      (setf thumbnails (cl-delete (alist-get 'url thumbnail) thumbnails
-                                  :test #'string-equal
-                                  :key (lambda (thumbnail) (alist-get 'url thumbnail)))
-            thumbnail (ytel-show--select-thumbnail thumbnails)
-            data (ytel-show--thumbnail-load-data thumbnail)))
-
-    data))
+  (thread-last thumbnails
+    ytel-show--repair-thumbnail-urls
+    ytel-show--filter-thumbnails
+    ytel-show--get-thumbnail))
 
 
 ;;;;; UPDATE
@@ -407,18 +419,36 @@ described in `YTEL-SHOW--UPDATE-CACHE'."
          (author-thumbnail-data (ytel-show--author-thumbnail-data author))
          (subs (ytel-show--author-subs author)))
 
-    (ytel-show--draw-url (concat "https://www.youtube.com/watch?v=" id) title)
+    (ytel-show--draw-url
+     (concat "https://www.youtube.com/watch?v=" id) (or title "no title"))
     (insert "  -  ")
-    (ytel-show--draw-url (concat "https://www.youtube.com/channel/" author-id) name)
-    (insert " " (ytel-show--format-author-subs subs) "\n"
-            (ytel--format-video-length length) "  -  "
-            (ytel--format-video-published published) "  -  "
-            (ytel--format-video-views views) "  -  "
-            (ytel-show--format-video-likes-dislikes likes dislikes) "\n")
-    (when thumbnail-data (insert-image thumbnail-data))
-    (insert (format "\n%s\n" description))
-    (when author-thumbnail-data (insert-image author-thumbnail-data))
-    (insert "\n")))
+
+    (when name
+      (ytel-show--draw-url (concat "https://www.youtube.com/channel/" author-id) name) (insert " "))
+
+    (when subs
+      (insert (ytel-show--format-author-subs subs) "\n"))
+
+    (when length
+      (insert (ytel--format-video-length length) "  -  "))
+
+    (when published
+      (insert (ytel--format-video-published published) "  -  "))
+
+    (when views
+      (insert (ytel--format-video-views views) "  -  "))
+
+    (when (or likes dislikes)
+      (insert (ytel-show--format-video-likes-dislikes likes dislikes) "\n"))
+
+    (when thumbnail-data
+      (insert-image thumbnail-data) (insert "\n"))
+
+    (when description
+      (insert description "\n"))
+
+    (when author-thumbnail-data
+      (insert-image author-thumbnail-data) (insert "\n"))))
 
 
 ;;;; COMMANDS
