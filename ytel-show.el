@@ -66,6 +66,7 @@
 (require 'subr)
 (require 'subr-x)
 (require 'seq)
+(require 'shr)
 (require 'ytel)
 
 
@@ -131,14 +132,26 @@
   :type 'string
   :group 'ytel-show)
 
-(defcustom ytel-show-image-max-width 600.0
+(defcustom ytel-show-image-max-width 800.0
   "Max image width.  This variable is used to scale images in buffer."
   :type 'float
   :group 'ytel-show)
 
-(defcustom ytel-show-image-max-height 350.0
+(defcustom ytel-show-image-max-height 400.0
   "Max image height.  This variable is used to scale images in buffer."
   :type 'float
+  :group 'ytel-show)
+
+(defface ytel-show-video-likes-face
+  '((((class color) (background light)) (:foreground "lime green"))
+    (((class color) (background dark))  (:foreground "lime green")))
+  "Face used for the video likes."
+  :group 'ytel-show)
+
+(defface ytel-show-author-subs-face
+  '((((class color) (background light)) (:foreground "brown"))
+    (((class color) (background dark))  (:foreground "brown")))
+  "Face used for the author subs."
   :group 'ytel-show)
 
 
@@ -330,10 +343,29 @@ invidious instance.  Return value is described in `YTEL-SHOW--UPDATE-CACHE'."
 
 ;;;;; DRAW
 
+(defun ytel-show--draw-url (url title)
+  "Drow `URL' using shr with `TITLE' at current point."
+  (let ((point (point)))
+    (insert (format "%s" title))
+    (make-text-button
+     point (point)
+     'follow-link t 'mouse-face 'highlight 'shr-url url 'keymap shr-map)))
+
+(defun ytel-show--format-video-likes-dislikes (likes dislikes)
+  "Format `LIKES' and `DISLIKES' before inserting them to buffer."
+  (let ((s (format "[likes:%s/%s]" likes dislikes)))
+    (propertize s 'face 'ytel-show-video-likes-face)))
+
+(defun ytel-show--format-author-subs (subs)
+  "Format `SUBS' before inserting them to buffer."
+  (propertize (format "(%s)" subs) 'face 'ytel-show-author-subs-face))
+
 (defun ytel-show--draw-data (data)
   "Draw video `DATA' to the buffer.  `DATA' is the value returned from
 `YTEL-SHOW--VIDEO-DATA'."
   (let* ((id (alist-get 'id data))
+
+         ;; video
          (video (alist-get 'video data))
          (title (ytel-show--video-title video))
          (thumbnail-data (ytel-show--video-thumbnail-data video))
@@ -345,20 +377,24 @@ invidious instance.  Return value is described in `YTEL-SHOW--UPDATE-CACHE'."
          (dislikes (ytel-show--video-dislikes video))
          (author-id (ytel-show--video-author-id video))
 
+         ;; author
          (author (alist-get 'author data))
          (name (ytel-show--author-name author))
          (author-thumbnail-data (ytel-show--author-thumbnail-data author))
          (subs (ytel-show--author-subs author)))
-    (insert (format "%s | %s\n" id title))
-    (when thumbnail-data
-      (insert-image thumbnail-data)
-      (insert "\n"))
-    (insert (format "Length: %s | Published: %s | Views: %s | Likes: %s | Dislikes: %s\n%s %s %s\n%s\n"
-                    length published views likes dislikes
-                    author-id name subs description))
-    (when author-thumbnail-data
-      (insert-image author-thumbnail-data)
-      (insert "\n"))))
+
+    (ytel-show--draw-url (concat "https://www.youtube.com/watch?v=" id) title)
+    (insert "  -  ")
+    (ytel-show--draw-url (concat "https://www.youtube.com/channel/" author-id) name)
+    (insert " " (ytel-show--format-author-subs subs) "\n"
+            (ytel--format-video-length length) "  -  "
+            (ytel--format-video-published published) "  -  "
+            (ytel--format-video-views views) "  -  "
+            (ytel-show--format-video-likes-dislikes likes dislikes) "\n")
+    (when thumbnail-data (insert-image thumbnail-data))
+    (insert (format "\n%s\n" description))
+    (when author-thumbnail-data (insert-image author-thumbnail-data))
+    (insert "\n")))
 
 
 ;;;; COMMANDS
