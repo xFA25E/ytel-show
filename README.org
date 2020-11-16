@@ -1,14 +1,35 @@
 * ytel-show
-  A package that lets you view video information from [[https://github.com/gRastello/ytel][ytel]]
+  A package that lets you view video information from [[https://github.com/gRastello/ytel][ytel]].
+
+  [[ytel-show-screenshot.png]]
+
+* Easy setup
+  ~(define-key ytel-mode-map (kbd "RET") #'ytel-show)~
+
 * Usage
-  Call `ytel-show` from *ytel* buffer and then use `n/p` to cycle videos.
+  - /n|p/ :: switch videos
+  - /G/ :: to recache video information
+
+* Extensibility
+  You can easily extend this package for showing videos from other places.  Just
+  give ~ytel-show~ function a ~buffer~ argument and your vector of ~video-ids~
+  and your videos will be displayed.
+
 * Note
-  It only cycles through videos from current page.  To load next page, you
-  should load it in the *ytel* buffer first and then call `ytel-show` again.
-* Todo [7/12]
-  - [ ] add fancy graphics and styles with faces (update screenshot)
+  Viewed videos are set with ~ytel-show~ command.  In order to go to next videos
+  page, you should first switch page in *ytel* buffer and then call ~ytel-show~
+  again.
+
+* Caveats
+  Sometimes json-reader will fail to parse a response from invidious instance or
+  the connection will timeout.  You will see an almost empty buffer.  Usually,
+  hitting the /G/ (~ytel-show-reload-video-data~) key a couple of times helps.
+  Currently, I don't have a solution for this.
+
+* Todo [8/12]
+  - [ ] add youtube comments
   - [ ] test more and run flycheck
-  - [ ] improve readme (describe caveats and add screenshot, dependencies, bugreports)
+  - [ ] add fancy graphics and styles with faces (update screenshot)
   - [ ] better thumbnail selection ::
     Sometimes maxres/maxresdefault thumbnails are empty.  During updates, if the
     returned thumbnail is nil, and there is already a cached thumbnail, dont
@@ -21,7 +42,7 @@
     prefixed with https://i.ytimg.com
 
     Add interactive thumbnail selection
-  - [ ] add youtube comments
+  - [X] improve readme (describe caveats and add screenshot, dependencies, bugreports)
   - [X] `ytel-show` should take a buffer name (describe this in docs)
   - [X] check `ytel-show` errors
   - [X] add autoloads

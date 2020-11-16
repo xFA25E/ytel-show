@@ -38,9 +38,9 @@
 ;;
 ;; Note:
 ;;
-;; Viewed videos are set with `YTEL-SHOW' command.  In order to go to next page
-;; videos, you should first switch page in `YTEL' buffer and then call
-;; `ytel-show' again.
+;; Viewed videos are set with `YTEL-SHOW' command.  In order to go to next
+;; videos page, you should first switch page in `YTEL' buffer and then call
+;; `YTEL-SHOW' again.
 ;;
 ;;
 ;; Caveats:
