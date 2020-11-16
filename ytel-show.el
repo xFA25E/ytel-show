@@ -20,7 +20,7 @@
 
 ;;; Commentary:
 
-;; Ytel-Show: view youtube video details in emacs
+;; Ytel-Show: view youtube video details in Emacs
 ;;
 ;; This package is dependent on `YTEL' package.
 ;;
@@ -71,9 +71,7 @@
 ;;;; IMPORTS
 
 (require 'files)
-(require 'window)
 (require 'simple)
-(require 'subr)
 (require 'subr-x)
 (require 'seq)
 (require 'shr)
@@ -172,15 +170,16 @@
   (aref ytel-show--video-ids ytel-show--index))
 
 (defun ytel-show--query-video (id)
-  "Query invidous instance for video data by id."
+  "Query invidous instance for video data by `ID'."
   (ytel--API-call (concat "videos/" id) `(("fields" ,ytel-show--video-fields))))
 
 
 ;;;;; THUMBNAILS
 
 (defun ytel-show--repair-thumbnail-urls (thumbnails)
-  "Repair broken urls in `THUMBNAILS'.  Some urls might be without \"https:\" or
-\"https://i.ytimg.com\" prefix.  Detect these urls and try to repair them."
+  "Repair broken urls in `THUMBNAILS'.
+Some urls might be without \"https:\" or \"https://i.ytimg.com\" prefix.  Detect
+these urls and try to repair them."
   (let* ((id (ytel-show--current-video-id))
          (single-slash-rx (rx bos "/vi/" (literal id) "/maxres.jpg" eos)))
     (cl-labels ((repair-single-slash (thumbnail)
@@ -199,9 +198,9 @@
       (seq-map #'repair thumbnails))))
 
 (defun ytel-show--filter-thumbnails (thumbnails)
-  "Filter `THUMBNAILS' from invidious response.  `THUMBNAILS' is a vector of
-alists with keys: url, width and height.  Return a sequence with alists with the
-following properties:
+  "Filter `THUMBNAILS' from invidious response.
+`THUMBNAILS' is a vector of alists with keys: url, width and height.  Return a
+sequence with alists with the following properties:
 
   url
 
@@ -231,8 +230,9 @@ following properties:
          (seq-reduce #'pred (seq-subseq thumbnails 1) (elt thumbnails 0))))))
 
 (defun ytel-show--thumbnail-load-data (thumbnail)
-  "Load image data from url and scale it to satisfy `YTEL-SHOW-IMAGE-MAX-WIDTH'
-and `YTEL-SHOW-IMAGE-MAX-HEIGHT'."
+  "Load image data from `THUMBNAIL's url.
+Scale it to satisfy `YTEL-SHOW-IMAGE-MAX-WIDTH' and
+`YTEL-SHOW-IMAGE-MAX-HEIGHT'."
   (when thumbnail
     (cl-flet ((scale (width height)
                (when (or (< ytel-show-image-max-width width)
@@ -254,7 +254,7 @@ and `YTEL-SHOW-IMAGE-MAX-HEIGHT'."
             (kill-buffer buffer)))))))
 
 (defun ytel-show--process-thumbnails (thumbnails)
-  "Filter thumbnails | Select | Load"
+  "Repair `THUMBNAILS' | filter | select | load."
   (let* ((thumbnails (thread-last thumbnails
                        ytel-show--repair-thumbnail-urls
                        ytel-show--filter-thumbnails))
@@ -277,8 +277,8 @@ and `YTEL-SHOW-IMAGE-MAX-HEIGHT'."
 ;;;;; UPDATE
 
 (defun ytel-show--update-video (video query-response)
-  "Update `VIDEO' struct with the data from `QUERY-RESPONSE'.  Return updated
-`VIDEO'."
+  "Update `VIDEO' struct with the data from `QUERY-RESPONSE'.
+Return updated `VIDEO'."
   (let-alist query-response
     (when-let ((thumbnail (ytel-show--process-thumbnails .videoThumbnails)))
       (setf (ytel-show--video-thumbnail-data video) thumbnail))
@@ -294,8 +294,8 @@ and `YTEL-SHOW-IMAGE-MAX-HEIGHT'."
   video)
 
 (defun ytel-show--update-author (author query-response)
-  "Update `AUTHOR' struct with the data from `QUERY-RESPONSE'.  Return updated
-`AUTHOR'."
+  "Update `AUTHOR' struct with the data from `QUERY-RESPONSE'.
+Return updated `AUTHOR'."
   (let-alist query-response
     (when-let ((thumbnail (ytel-show--process-thumbnails .authorThumbnails)))
       (setf (ytel-show--author-thumbnail-data author) thumbnail))
@@ -305,8 +305,8 @@ and `YTEL-SHOW-IMAGE-MAX-HEIGHT'."
   author)
 
 (defun ytel-show--update-cache (id)
-  "Update video's and author's cached data by video `ID' by querying invidious
-instance.  Return an alist with the following keys:
+  "Update cached data by video `ID'.
+Return an alist with the following keys:
 
   id - video `ID'
 
@@ -328,8 +328,8 @@ instance.  Return an alist with the following keys:
     `((id . ,id) (video . ,video) (author . ,author))))
 
 (defun ytel-show--update-index (add &optional cycle)
-  "Update `YTEL-SHOW--INDEX' by adding `ADD' to it.  If `CYCLE' is non-nil then
-the addition is performed with modulus."
+  "Update `YTEL-SHOW--INDEX' by adding `ADD' to it.
+If `CYCLE' is non-nil then the addition is performed with modulus."
   (let ((new-index (+ add ytel-show--index))
         (length (length ytel-show--video-ids)))
     (cond
@@ -342,8 +342,9 @@ the addition is performed with modulus."
 ;;;;; DATA
 
 (defun ytel-show--video-data (id)
-  "Get cached data by video `ID'.  If the video is not cached, then query the
-invidious instance.  Return value is described in `YTEL-SHOW--UPDATE-CACHE'."
+  "Get cached data by video `ID'.
+If the video is not cached, then query the invidious instance.  Return value is
+described in `YTEL-SHOW--UPDATE-CACHE'."
   (if-let* ((video (gethash id ytel-show--videos-cache))
             (author (gethash (ytel-show--video-author-id video)
                              ytel-show--authors-cache)))
@@ -371,8 +372,8 @@ invidious instance.  Return value is described in `YTEL-SHOW--UPDATE-CACHE'."
   (propertize (format "(%s)" subs) 'face 'ytel-show-author-subs-face))
 
 (defun ytel-show--draw-data (data)
-  "Draw video `DATA' to the buffer.  `DATA' is the value returned from
-`YTEL-SHOW--VIDEO-DATA'."
+  "Draw video `DATA' to the buffer.
+`DATA' is the value returned from `YTEL-SHOW--VIDEO-DATA'."
   (let* ((id (alist-get 'id data))
 
          ;; video
@@ -410,8 +411,8 @@ invidious instance.  Return value is described in `YTEL-SHOW--UPDATE-CACHE'."
 ;;;; COMMANDS
 
 (defun ytel-show-revert-buffer (&rest _)
-  "Revert current Ytel-Show buffer.  Erase the buffer and redraw current video's
-data."
+  "Revert current Ytel-Show buffer.
+Erase the buffer and redraw current video's data."
   (interactive)
   (let ((inhibit-read-only t)
         (id (ytel-show--current-video-id)))
@@ -422,7 +423,8 @@ data."
     (message "Showing %s..." id)))
 
 (defun ytel-show-next-video (&optional cycle)
-  "Switch to the next video in `YTEL-SHOW--VIDEO-IDS' and draw it."
+  "Switch to the next video in `YTEL-SHOW--VIDEO-IDS' and draw it.
+With overflow, cycle if `CYCLE' is provided."
   (interactive "P")
   (let ((inx ytel-show--index))
     (ytel-show--update-index 1 cycle)
@@ -431,7 +433,8 @@ data."
       (ytel-show-revert-buffer))))
 
 (defun ytel-show-previous-video (&optional cycle)
-  "Switch to the previous video in `YTEL-SHOW--VIDEO-IDS' and draw it."
+  "Switch to the previous video in `YTEL-SHOW--VIDEO-IDS' and draw it.
+With overflow, cycle if `CYCLE' is provided."
   (interactive "P")
   (let ((inx ytel-show--index))
     (ytel-show--update-index -1 cycle)
@@ -448,9 +451,9 @@ data."
 
 ;;;###autoload
 (defun ytel-show (video-ids index &optional buffer)
-  "Show video information in the Ytel-Show buffer.  This is the main entry
-function for this package.  Interactively, it must be called from a `YTEL'
-buffer.
+  "Show video information in the Ytel-Show buffer.
+This is the main entry function for this package.  Interactively, it must be
+called from a `YTEL' buffer.
 
 `VIDEO-IDS' is a vector of strings with youtube video ids to show.
 
@@ -467,7 +470,7 @@ videos from `VIDEO-IDS'."
   (unless (and (vectorp video-ids)
                (seq-every-p (lambda (s) (and (stringp s) (= 11 (length s)))) video-ids)
                (integerp index) (<= 0 index (1- (length video-ids))))
-    (error "Invalid arguments to `YTEL-SHOW'."))
+    (error "Invalid arguments to `YTEL-SHOW'"))
 
   (unless buffer
     (setq buffer ytel-show-default-buffer-name))

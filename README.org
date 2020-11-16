@@ -44,9 +44,9 @@
 * Bugs
   If you find bugs, please, report it by writing an issue or send a PR.
 
-* Todo [10/12]
+* Todo [11/12]
   - [ ] add youtube comments
-  - [ ] test more and run flycheck
+  - [X] test more and run flycheck
   - [X] add fancy graphics and styles with faces (update screenshot)
   - [X] better thumbnail selection [4/4] ::
     - [X] If image url is 404, retry with another url
