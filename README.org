@@ -8,7 +8,7 @@
 * Todo [7/12]
   - [ ] add fancy graphics and styles with faces (update screenshot)
   - [ ] test more and run flycheck
-  - [ ] improve readme (describe caveats and add screenshot, dependencies)
+  - [ ] improve readme (describe caveats and add screenshot, dependencies, bugreports)
   - [ ] better thumbnail selection ::
     Sometimes maxres/maxresdefault thumbnails are empty.  During updates, if the
     returned thumbnail is nil, and there is already a cached thumbnail, dont
@@ -16,6 +16,11 @@
 
     Sometimes, the author's thumbnail will be with a double-slash prefix.  Maybe
     I should simply detect such thumbnails and prepend https: to them.
+
+    Sometimes, urls are prefixed with single-slash. These are probably should be
+    prefixed with https://i.ytimg.com
+
+    Add interactive thumbnail selection
   - [ ] add youtube comments
   - [X] `ytel-show` should take a buffer name (describe this in docs)
   - [X] check `ytel-show` errors

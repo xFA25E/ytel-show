@@ -90,13 +90,11 @@
   "Current video index in `YTEL-SHOW--VIDEO-IDS'.")
 
 (defvar ytel-show--video-fields
-  (string-join
-   '("videoId" "title"
-     "videoThumbnails(url,width,height)"
-     "description" "published" "lengthSeconds"
-     "viewCount" "likeCount" "dislikeCount"
-     "author" "authorId" "authorThumbnails" "subCountText")
-   ",")
+  (string-join '("videoId" "title" "videoThumbnails"
+                 "description" "published" "lengthSeconds"
+                 "viewCount" "likeCount" "dislikeCount"
+                 "author" "authorId" "authorThumbnails" "subCountText")
+               ",")
   "Requested fields in a query to indidious instance.  Used to save bandwidth.")
 
 (defvar ytel-show--videos-cache (make-hash-table :test 'equal :size 20)
