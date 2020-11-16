@@ -485,10 +485,9 @@ videos from `VIDEO-IDS'."
                (integerp index) (<= 0 index (1- (length video-ids))))
     (error "Invalid arguments to `YTEL-SHOW'"))
 
-  (unless buffer
-    (setq buffer ytel-show-default-buffer-name))
+  (switch-to-buffer
+   (get-buffer-create (or buffer ytel-show-default-buffer-name)))
 
-  (switch-to-buffer (get-buffer-create buffer))
   (unless (derived-mode-p 'ytel-show-mode)
     (ytel-show-mode))
   (setq ytel-show--video-ids video-ids ytel-show--index index)
