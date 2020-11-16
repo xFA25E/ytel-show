@@ -45,7 +45,7 @@
   If you find bugs, please, report it by writing an issue or send a PR.
 
 * Todo [11/12]
-  - [ ] add youtube comments
+  - [ ] youtube comments
   - [X] test more and run flycheck
   - [X] add fancy graphics and styles with faces (update screenshot)
   - [X] better thumbnail selection [4/4] ::
