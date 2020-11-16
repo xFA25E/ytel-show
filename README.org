@@ -1,10 +1,14 @@
 * ytel-show
-  A package that lets you view video information from [[https://github.com/gRastello/ytel][ytel]].
+  View youtube video information from [[https://github.com/gRastello/ytel][ytel]].
 
   [[./ytel-show-screenshot.png]]
 
+  [[./ytel-show-screenshot-footer.png]]
+
 * Easy setup
-  ~(define-key ytel-mode-map (kbd "RET") #'ytel-show)~
+  #+begin_src emacs-lisp
+    (define-key ytel-mode-map (kbd "RET") #'ytel-show)
+  #+end_src
 
   *OR*
 
@@ -16,7 +20,7 @@
 
 * Usage
   - /n|p/ :: switch videos
-  - /G/ :: to recache video information
+  - /G/ :: recache video information
 
 * Customization
   Default buffer name: ~ytel-show-default-buffer-name~.
@@ -26,44 +30,28 @@
   Faces: ~ytel-show-video-likes-face~, ~ytel-show-author-subs-face~
 
 * Extensibility
-  You can easily extend this package for showing videos from other places.  Just
-  give ~ytel-show~ function a ~buffer~ argument and your vector of ~video-ids~
-  and your videos will be displayed.
+  You can easily extend this package by giving ~ytel-show~ function a ~buffer~
+  argument and a vector of ~video-ids~.  Your videos will be display in a new
+  buffer.  For example: you could customize ~browse-url-browser-function~ to
+  detect youtube video urls and display them using ~ytel-show~.
 
 * Note
-  Viewed videos are set with ~ytel-show~ command.  In order to go to next videos
-  page, you should first switch page in *ytel* buffer and then call ~ytel-show~
-  again.
+  Viewed videos are set with ~ytel-show~ command.  In order to load videos from
+  other *ytel* pages, you should switch page in *ytel* buffer and call
+  ~ytel-show~ again.
 
 * Caveats
   Sometimes json-reader will fail to parse a response from invidious instance or
   the connection will timeout.  You will see an almost empty buffer.  Usually,
   hitting the /G/ (~ytel-show-reload-video-data~) key a couple of times helps.
-  Currently, I don't have a solution for this.
+
+  Sometimes invidous instance will send empty author thumbnail urls, so they
+  will not be shown.
+
+  Currently, I don't have a solution for these problems.
 
 * Bugs
-  If you find bugs, please, report it by writing an issue or send a PR.
+  If you find bugs, please, report it by writing an issue or send a PR.  Thanks!
 
-* Todo [11/12]
-  - [ ] youtube comments
-  - [X] test more and run flycheck
-  - [X] add fancy graphics and styles with faces (update screenshot)
-  - [X] better thumbnail selection [4/4] ::
-    - [X] If image url is 404, retry with another url
-
-    - [X] Sometimes thumbnails are empty (nil).  During updates, if the returned
-      thumbnail is nil, and there is already a cached thumbnail, dont update.
-
-    - [X] Sometimes, the author's thumbnail will be with a double-slash prefix.
-      Maybe I should simply detect such thumbnails and prepend https: to them.
-
-    - [X] Sometimes, urls are prefixed with single-slash. These are probably
-      should be prefixed with https://i.ytimg.com
-  - [X] improve readme (describe caveats and add screenshot, dependencies, bugreports)
-  - [X] `ytel-show` should take a buffer name (describe this in docs)
-  - [X] check `ytel-show` errors
-  - [X] add autoloads
-  - [X] write documentation
-  - [X] add custom variables
-  - [X] add log messages
-  - [X] add includes
+* Todo
+  - youtube comments

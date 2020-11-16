@@ -1,4 +1,4 @@
-;;; ytel-show.el --- Show youtube video description from ytel  -*- lexical-binding: t; -*-
+;;; ytel-show.el --- View youtube video information from ytel  -*- lexical-binding: t; -*-
 
 ;; Copyright (C) 2020  Valeriy Litkovskyy
 
@@ -20,7 +20,7 @@
 
 ;;; Commentary:
 
-;; Ytel-Show: view youtube video details in Emacs
+;; Ytel-Show: view youtube video information in Emacs
 ;;
 ;; This package is dependent on `YTEL' package.
 ;;
@@ -38,8 +38,8 @@
 ;;
 ;; Usage:
 ;;
-;; n/p - to switch videos
-;; G - to recache video information
+;; n/p - switch videos
+;; G - recache video information
 ;;
 ;;
 ;; Customization:
@@ -51,10 +51,18 @@
 ;; Faces: `YTEL-SHOW-VIDEO-LIKES-FACE' `YTEL-SHOW-AUTHOR-SUBS-FACE'
 ;;
 ;;
+;; Extensibility:
+;;
+;; You can easily extend this package by giving `YTEL-SHOW' function a `BUFFER'
+;; argument and a vector of `VIDEO-IDS'.  Your videos will be display in a new
+;; buffer.  For example: you could customize `BROWSE-URL-BROWSER-FUNCTION' to
+;; detect youtube video urls and display them using `YTEL-SHOW'.
+;;
+;;
 ;; Note:
 ;;
-;; Viewed videos are set with `YTEL-SHOW' command.  In order to go to next
-;; videos page, you should first switch page in `YTEL' buffer and then call
+;; Viewed videos are set with `YTEL-SHOW' command.  In order to load videos from
+;; other *ytel* pages, you should switch page in *ytel* buffer and call
 ;; `YTEL-SHOW' again.
 ;;
 ;;
@@ -62,8 +70,13 @@
 ;;
 ;; Sometimes json-reader will fail to parse a response from invidious instance
 ;; or the connection will timeout.  You will see an almost empty buffer.
-;; Usually, hitting the "G" (`YTEL-SHOW-RELOAD-VIDEO-DATA') key a couple of
-;; times helps.  Currently, I don't have a solution for this.
+;; Usually,hitting the /G/ (`YTEL-SHOW-RELOAD-VIDEO-DATA') key a couple of times
+;; helps.
+;;
+;; Sometimes invidous instance will send empty author thumbnail urls, so they
+;; will not be shown.
+;;
+;; Currently, I don't have a solution for these problems.
 
 ;;; Code:
 
