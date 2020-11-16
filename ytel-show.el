@@ -353,6 +353,7 @@ data."
   (ytel-show--update-cache (ytel-show--current-video-id))
   (ytel-show-revert-buffer))
 
+;;;###autoload
 (defun ytel-show (video-ids index)
   "Show video information in the Ytel-Show buffer.  This is the main entry
 function for this package.  Interactively, it must be called from a `YTEL'
