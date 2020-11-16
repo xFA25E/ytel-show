@@ -1,7 +1,7 @@
 * ytel-show
   A package that lets you view video information from [[https://github.com/gRastello/ytel][ytel]].
 
-  [[ytel-show-screenshot.png]]
+  [[./ytel-show-screenshot.png]]
 
 * Easy setup
   ~(define-key ytel-mode-map (kbd "RET") #'ytel-show)~
