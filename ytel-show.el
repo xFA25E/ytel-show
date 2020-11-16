@@ -123,7 +123,7 @@
 
 (defcustom ytel-show-default-buffer-name "*ytel-show*"
   "Default buffer name used when the `BUFFER' argument in `YTEL-SHOW' is nil."
-  :type 'strting
+  :type 'string
   :group 'ytel-show)
 
 (defcustom ytel-show-image-max-width 600.0
