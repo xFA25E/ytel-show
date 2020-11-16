@@ -13,7 +13,7 @@
   - [ ] check `ytel-show` errors
   - [ ] `ytel-show` should take a buffer name
   - [ ] test more
-  - [ ] improve readme (describe caveats and add screenshot)
+  - [ ] improve readme (describe caveats and add screenshot, dependencies)
   - [ ] add youtube comments
   - [X] add log messages
   - [X] add includes
