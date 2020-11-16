@@ -155,6 +155,26 @@
 
 ;;;;; THUMBNAILS
 
+(defun ytel-show--repair-thumbnail-urls (thumbnails)
+  "Repair broken urls in `THUMBNAILS'.  Some urls might be without \"https:\" or
+\"https://i.ytimg.com\" prefix.  Detect these urls and try to repair them."
+  (let* ((id (ytel-show--current-video-id))
+         (single-slash-rx (rx bos "/vi/" (literal id) "/maxres.jpg" eos)))
+    (cl-labels ((repair-single-slash (thumbnail)
+                 (when-let ((url (alist-get 'url thumbnail)))
+                   (when (string-match-p single-slash-rx url)
+                     (setf (alist-get 'url thumbnail)
+                           (concat "https://i.ytimg.com" url))))
+                 thumbnail)
+                (repair-double-slash (thumbnail)
+                 (let ((url (alist-get 'url thumbnail)))
+                   (when (string-match-p (rx bos "//yt3.ggpht.com") url)
+                     (setf (alist-get 'url thumbnail) (concat "https:" url))))
+                 thumbnail)
+                (repair (thumbnail)
+                 (repair-single-slash (repair-double-slash thumbnail))))
+      (seq-map #'repair thumbnails))))
+
 (defun ytel-show--filter-thumbnails (thumbnails)
   "Filter `THUMBNAILS' from invidious response.  `THUMBNAILS' is a vector of
 alists with keys: url, width and height.  Return a sequence with alists with the
@@ -182,7 +202,7 @@ following properties:
   (cl-case (length thumbnails)
     (0 nil)
     (1 (elt thumbnails 0))
-    (t (cl-labels ((height (e) (cdr (assq 'height e)))
+    (t (cl-labels ((height (e) (alist-get 'height e))
                    (cmp (e1 e2) (<= (height e1) (height e2)))
                    (pred (acc elm) (if (cmp acc elm) elm acc)))
          (seq-reduce #'pred (seq-subseq thumbnails 1) (elt thumbnails 0))))))
@@ -201,17 +221,34 @@ and `YTEL-SHOW-IMAGE-MAX-HEIGHT'."
           (unwind-protect
               (let ((data (with-current-buffer buffer
                             (goto-char (point-min))
-                            (search-forward "\n\n")
-                            (buffer-substring (point) (point-max)))))
-                (apply #'create-image data nil t (scale .width .height)))
+                            (if (search-forward "HTTP/1.1 404" nil t)
+                                :not-found
+                              (search-forward "\n\n")
+                              (buffer-substring (point) (point-max))))))
+                (if (eq :not-found data)
+                    data
+                  (apply #'create-image data nil t (scale .width .height))))
             (kill-buffer buffer)))))))
 
 (defun ytel-show--process-thumbnails (thumbnails)
   "Filter thumbnails | Select | Load"
-  (thread-last thumbnails
-    ytel-show--filter-thumbnails
-    ytel-show--select-thumbnail
-    ytel-show--thumbnail-load-data))
+  (let* ((thumbnails (thread-last thumbnails
+                       ytel-show--repair-thumbnail-urls
+                       ytel-show--filter-thumbnails))
+         thumbnail data)
+
+    (setf thumbnail (ytel-show--select-thumbnail thumbnails)
+          data (ytel-show--thumbnail-load-data thumbnail))
+
+    (while (and thumbnails (or (eq :not-found data) (null data)))
+
+      (setf thumbnails (cl-delete (alist-get 'url thumbnail) thumbnails
+                                  :test #'string-equal
+                                  :key (lambda (thumbnail) (alist-get 'url thumbnail)))
+            thumbnail (ytel-show--select-thumbnail thumbnails)
+            data (ytel-show--thumbnail-load-data thumbnail)))
+
+    data))
 
 
 ;;;;; UPDATE
@@ -220,26 +257,28 @@ and `YTEL-SHOW-IMAGE-MAX-HEIGHT'."
   "Update `VIDEO' struct with the data from `QUERY-RESPONSE'.  Return updated
 `VIDEO'."
   (let-alist query-response
-    (setf
-     (ytel-show--video-thumbnail-data video) (ytel-show--process-thumbnails .videoThumbnails)
-     (ytel-show--video-title video) .title
-     (ytel-show--video-description video) .description
-     (ytel-show--video-published video) .published
-     (ytel-show--video-length video) .lengthSeconds
-     (ytel-show--video-views video) .viewCount
-     (ytel-show--video-likes video) .likeCount
-     (ytel-show--video-dislikes video) .dislikeCount
-     (ytel-show--video-author-id video) .authorId))
+    (when-let ((thumbnail (ytel-show--process-thumbnails .videoThumbnails)))
+      (setf (ytel-show--video-thumbnail-data video) thumbnail))
+
+    (setf (ytel-show--video-title video) .title
+          (ytel-show--video-description video) .description
+          (ytel-show--video-published video) .published
+          (ytel-show--video-length video) .lengthSeconds
+          (ytel-show--video-views video) .viewCount
+          (ytel-show--video-likes video) .likeCount
+          (ytel-show--video-dislikes video) .dislikeCount
+          (ytel-show--video-author-id video) .authorId))
   video)
 
 (defun ytel-show--update-author (author query-response)
   "Update `AUTHOR' struct with the data from `QUERY-RESPONSE'.  Return updated
 `AUTHOR'."
   (let-alist query-response
-    (setf
-     (ytel-show--author-thumbnail-data author) (ytel-show--process-thumbnails .authorThumbnails)
-     (ytel-show--author-name author) .author
-     (ytel-show--author-subs author) .subCountText))
+    (when-let ((thumbnail (ytel-show--process-thumbnails .authorThumbnails)))
+      (setf (ytel-show--author-thumbnail-data author) thumbnail))
+
+    (setf (ytel-show--author-name author) .author
+          (ytel-show--author-subs author) .subCountText))
   author)
 
 (defun ytel-show--update-cache (id)
@@ -294,8 +333,8 @@ invidious instance.  Return value is described in `YTEL-SHOW--UPDATE-CACHE'."
 (defun ytel-show--draw-data (data)
   "Draw video `DATA' to the buffer.  `DATA' is the value returned from
 `YTEL-SHOW--VIDEO-DATA'."
-  (let* ((id (cdr (assq 'id data)))
-         (video (cdr (assq 'video data)))
+  (let* ((id (alist-get 'id data))
+         (video (alist-get 'video data))
          (title (ytel-show--video-title video))
          (thumbnail-data (ytel-show--video-thumbnail-data video))
          (description (ytel-show--video-description video))
@@ -306,7 +345,7 @@ invidious instance.  Return value is described in `YTEL-SHOW--UPDATE-CACHE'."
          (dislikes (ytel-show--video-dislikes video))
          (author-id (ytel-show--video-author-id video))
 
-         (author (cdr (assq 'author data)))
+         (author (alist-get 'author data))
          (name (ytel-show--author-name author))
          (author-thumbnail-data (ytel-show--author-thumbnail-data author))
          (subs (ytel-show--author-subs author)))
