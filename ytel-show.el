@@ -167,14 +167,12 @@
   :group 'ytel-show)
 
 (defface ytel-show-video-likes-face
-  '((((class color) (background light)) (:foreground "lime green"))
-    (((class color) (background dark))  (:foreground "lime green")))
-  "Face used for the video likes."
+  '((t :inherit font-lock-doc-face))
+  "Face used for the video likes and dislikes."
   :group 'ytel-show)
 
 (defface ytel-show-author-subs-face
-  '((((class color) (background light)) (:foreground "brown"))
-    (((class color) (background dark))  (:foreground "brown")))
+  '((t :inherit font-lock-string-face))
   "Face used for the author subs."
   :group 'ytel-show)
 
