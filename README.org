@@ -1,5 +1,5 @@
 * ytel-show
-  View youtube video information from [[https://github.com/gRastello/ytel][ytel]].
+  Browse youtube from emacs!  This package relies on [[https://github.com/gRastello/ytel][ytel]] to fetch information.
 
   [[./ytel-show-screenshot.png]]
 
