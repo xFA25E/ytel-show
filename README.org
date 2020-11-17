@@ -59,7 +59,7 @@
   Sometimes invidous instance will send empty author thumbnail urls, so they
   will not be shown.
 
-  If the first comments page will fail to load, try hitting /g/.
+  If the first comments page won't load properly, try hitting /g/.
 
   Currently, I don't have a solution for these problems.
 
