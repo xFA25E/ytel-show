@@ -531,7 +531,7 @@ videos from `VIDEO-IDS'."
 
   (unless (derived-mode-p 'ytel-show-mode)
     (ytel-show-mode))
-  (setq ytel-show--video-ids video-ids ytel-show--index index)
+  (setq-local ytel-show--video-ids video-ids ytel-show--index index)
   (ytel-show-revert-buffer))
 
 (define-derived-mode ytel-show-mode special-mode "Ytel-Show"
