@@ -62,12 +62,12 @@
 ;;
 ;; Extensibility:
 ;;
-;; You can easily extend this package by giving `YTEL-SHOW' function a `BUFFER'
-;; argument and a vector of `VIDEO-IDS'.  Your videos will be display in a new
+;; You can easily extend this package by giving `YTEL-SHOW' function a BUFFER
+;; argument and a vector of VIDEO-IDS.  Your videos will be display in a new
 ;; buffer.  For example: you could customize `BROWSE-URL-BROWSER-FUNCTION' to
-;; detect youtube video urls and display them using `YTEL-SHOW'.
+;; detect youtube video urls and display them using YTEL-SHOW.
 ;;
-;; Same thing with `YTEL-SHOW-COMMENTS'.  It takes `ID', `TITLE' and a `BUFFER'.
+;; Same thing with `YTEL-SHOW-COMMENTS'.  It takes ID, TITLE and a BUFFER.
 ;;
 ;; Note:
 ;;
