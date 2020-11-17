@@ -84,7 +84,10 @@
 ;;; Code:
 
 
-;;;; IMPORTS
+;;;; SHOW VIDEO
+
+
+;;;;; IMPORTS
 
 (require 'files)
 (require 'simple)
@@ -94,7 +97,7 @@
 (require 'ytel)
 
 
-;;;; TYPES
+;;;;; TYPES
 
 (cl-defstruct (ytel-show--video (:constructor ytel-show--video-create)
                                 (:copier nil))
@@ -108,10 +111,10 @@
   name thumbnail-data subs)
 
 
-;;;; VARIABLES
+;;;;; VARIABLES
 
 
-;;;;; INTERNAL
+;;;;;; INTERNAL
 
 (defvar-local ytel-show--video-ids nil
   "A vector of stored video ids.")
@@ -134,7 +137,7 @@
   "Hash-table with cached author data.")
 
 
-;;;;; MODE
+;;;;;; MODE
 
 (defvar ytel-show-mode-map
   (let ((map (make-sparse-keymap)))
@@ -145,7 +148,7 @@
   "Keymap for `YTEL-SHOW-MODE'.")
 
 
-;;;;; CUSTOM
+;;;;;; CUSTOM
 
 (defgroup ytel-show nil
   "View youtube video details from ytel."
@@ -177,18 +180,24 @@
   :group 'ytel-show)
 
 
-;;;; FUNCTIONS
+;;;;; FUNCTIONS
 
 (defun ytel-show--current-video-id ()
   "Get currently showed video id."
   (aref ytel-show--video-ids ytel-show--index))
 
+(defun ytel-show--check-response-error (response)
+  (if-let ((msg (alist-get 'error response)))
+      (error msg)
+    response))
+
 (defun ytel-show--query-video (id)
   "Query invidous instance for video data by `ID'."
-  (ytel--API-call (concat "videos/" id) `(("fields" ,ytel-show--video-fields))))
+  (ytel-show--check-response-error
+   (ytel--API-call (concat "videos/" id) `(("fields" ,ytel-show--video-fields)))))
 
 
-;;;;; THUMBNAILS
+;;;;;; THUMBNAILS
 
 (defun ytel-show--repair-thumbnail-urls (thumbnails)
   "Repair broken urls in `THUMBNAILS'.
@@ -297,7 +306,7 @@ Scale it to satisfy `YTEL-SHOW-IMAGE-MAX-WIDTH' and
     ytel-show--get-thumbnail))
 
 
-;;;;; UPDATE
+;;;;;; UPDATE
 
 (defun ytel-show--update-video (video query-response)
   "Update `VIDEO' struct with the data from `QUERY-RESPONSE'.
@@ -362,7 +371,7 @@ If `CYCLE' is non-nil then the addition is performed with modulus."
       (setq ytel-show--index new-index)))))
 
 
-;;;;; DATA
+;;;;;; DATA
 
 (defun ytel-show--video-data (id)
   "Get cached data by video `ID'.
@@ -375,7 +384,7 @@ described in `YTEL-SHOW--UPDATE-CACHE'."
     (ytel-show--update-cache id)))
 
 
-;;;;; DRAW
+;;;;;; DRAW
 
 (defun ytel-show--draw-url (url title)
   "Drow `URL' using shr with `TITLE' at current point."
@@ -449,7 +458,7 @@ described in `YTEL-SHOW--UPDATE-CACHE'."
       (insert-image author-thumbnail-data) (insert "\n"))))
 
 
-;;;; COMMANDS
+;;;;; COMMANDS
 
 (defun ytel-show-revert-buffer (&rest _)
   "Revert current Ytel-Show buffer.
