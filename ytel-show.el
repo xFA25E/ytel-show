@@ -1,4 +1,4 @@
-;;; ytel-show.el --- View youtube video information from ytel  -*- lexical-binding: t; -*-
+;;; ytel-show.el --- Browse youtube in emacs -*- lexical-binding: t; -*-
 
 ;; Copyright (C) 2020  Valeriy Litkovskyy
 
