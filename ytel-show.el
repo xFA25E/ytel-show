@@ -41,17 +41,23 @@
 ;;
 ;; Usage:
 ;;
+;; Ytel-Show:
 ;; n/p - switch videos
 ;; G - recache video information
 ;;
+;; Ytel-Show-Comments:
+;; l - go to previous page
+;; g - retry downloading failed page
 ;;
 ;; Customization:
 ;;
-;; Default buffer name: `YTEL-SHOW-DEFAULT-BUFFER-NAME'.
+;; Default buffer name: `YTEL-SHOW-DEFAULT-BUFFER-NAME'
+;; `YTEL-SHOW-COMMENTS-DEFAULT-BUFFER-NAME'.
 ;;
 ;; Thumbnail sizes: `YTEL-SHOW-IMAGE-MAX-WIDTH' `YTEL-SHOW-IMAGE-MAX-HEIGHT'
 ;;
 ;; Faces: `YTEL-SHOW-VIDEO-LIKES-FACE' `YTEL-SHOW-AUTHOR-SUBS-FACE'
+;; `YTEL-SHOW-COMMENTS-OWNER-FACE'
 ;;
 ;;
 ;; Extensibility:
@@ -61,6 +67,7 @@
 ;; buffer.  For example: you could customize `BROWSE-URL-BROWSER-FUNCTION' to
 ;; detect youtube video urls and display them using `YTEL-SHOW'.
 ;;
+;; Same thing with `YTEL-SHOW-COMMENTS'.  It takes `ID', `TITLE' and a `BUFFER'.
 ;;
 ;; Note:
 ;;
@@ -68,6 +75,8 @@
 ;; other *ytel* pages, you should switch page in *ytel* buffer and call
 ;; `YTEL-SHOW' again.
 ;;
+;; Same thing with `YTEL-SHOW-COMMENTS' command.  It sets all the necessary
+;; information.
 ;;
 ;; Caveats:
 ;;
@@ -78,6 +87,8 @@
 ;;
 ;; Sometimes invidous instance will send empty author thumbnail urls, so they
 ;; will not be shown.
+;;
+;; If the first comments page will fail to load, try hitting /g/.
 ;;
 ;; Currently, I don't have a solution for these problems.
 
@@ -137,13 +148,42 @@
   "Hash-table with cached author data.")
 
 
-;;;;;; MODE
+;;;;;; MAPS
+
+(defvar ytel-show-previous-button-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "RET") #'ytel-show-previous-video)
+    (define-key map (kbd "<mouse-2>") #'ytel-show-previous-video)
+    map)
+  "Keymap for a button that switches to previous video.")
+
+(defvar ytel-show-next-button-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "RET") #'ytel-show-next-video)
+    (define-key map (kbd "<mouse-2>") #'ytel-show-next-video)
+    map)
+  "Keymap for a button that switches to next video.")
+
+(defvar ytel-show-close-button-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "RET") #'quit-window)
+    (define-key map (kbd "<mouse-2>") #'quit-window)
+    map)
+  "Keymap for a button that closes a window.")
+
+(defvar ytel-show-comments-button-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "RET") #'ytel-show-comments)
+    (define-key map (kbd "<mouse-2>") #'ytel-show-comments)
+    map)
+  "Keymap for a button that shows video comments.")
 
 (defvar ytel-show-mode-map
   (let ((map (make-sparse-keymap)))
-    (define-key map "n" #'ytel-show-next-video)
-    (define-key map "p" #'ytel-show-previous-video)
-    (define-key map "G" #'ytel-show-reload-video-data)
+    (define-key map (kbd "n") #'ytel-show-next-video)
+    (define-key map (kbd "p") #'ytel-show-previous-video)
+    (define-key map (kbd "G") #'ytel-show-reload-video-data)
+    (define-key map (kbd "c") #'ytel-show-comments)
     map)
   "Keymap for `YTEL-SHOW-MODE'.")
 
@@ -187,6 +227,7 @@
   (aref ytel-show--video-ids ytel-show--index))
 
 (defun ytel-show--check-response-error (response)
+  "Check if `RESPONSE' is an error and signal an error."
   (if-let ((msg (alist-get 'error response)))
       (error msg)
     response))
@@ -328,7 +369,7 @@ If `RECACHE-IMAGES' is non-nil, redownload thumbnails.  Return updated `VIDEO'."
 
 (defun ytel-show--update-author (author query-response &optional recache-images)
   "Update `AUTHOR' struct with the data from `QUERY-RESPONSE'.
-Return updated `AUTHOR'."
+If `RECACHE-IMAGES' is supplied, redownload thumbnails.  Return updated `AUTHOR'."
   (let-alist query-response
     (when (or recache-images (null (ytel-show--author-thumbnail-data author)))
      (when-let ((thumbnail (ytel-show--process-thumbnails .authorThumbnails)))
@@ -390,16 +431,29 @@ described in `YTEL-SHOW--UPDATE-CACHE'."
 ;;;;;; DRAW
 
 (defun ytel-show--draw-url (url title)
-  "Drow `URL' using shr with `TITLE' at current point."
+  "Draw `URL' using shr with `TITLE' at current point."
   (let ((point (point)))
     (insert (format "%s" title))
     (make-text-button
      point (point)
      'follow-link t 'mouse-face 'highlight 'shr-url url 'keymap shr-map)))
 
-(defun ytel-show--format-video-likes-dislikes (likes dislikes)
+(defun ytel-show--draw-button (title map &rest props)
+  "Draw a `TITLE' button with `MAP' and `PROPS'."
+  (let ((point (point)))
+    (insert title)
+    (apply #'make-text-button
+           point (point)
+           'follow-link t
+           'mouse-face 'highlight
+           'keymap map
+           props)))
+
+(defun ytel-show--format-video-likes-dislikes (likes &optional dislikes)
   "Format `LIKES' and `DISLIKES' before inserting them to buffer."
-  (let ((s (format "[likes:%s/%s]" likes dislikes)))
+  (let ((s (concat (format "[likes:%s" likes)
+                   (when dislikes (format "/%s" dislikes))
+                   "]")))
     (propertize s 'face 'ytel-show-video-likes-face)))
 
 (defun ytel-show--format-author-subs (subs)
@@ -409,55 +463,50 @@ described in `YTEL-SHOW--UPDATE-CACHE'."
 (defun ytel-show--draw-data (data)
   "Draw video `DATA' to the buffer.
 `DATA' is the value returned from `YTEL-SHOW--VIDEO-DATA'."
-  (let* ((id (alist-get 'id data))
-
-         ;; video
-         (video (alist-get 'video data))
-         (title (ytel-show--video-title video))
-         (thumbnail-data (ytel-show--video-thumbnail-data video))
-         (description (ytel-show--video-description video))
-         (published (ytel-show--video-published video))
-         (length (ytel-show--video-length video))
-         (views (ytel-show--video-views video))
-         (likes (ytel-show--video-likes video))
-         (dislikes (ytel-show--video-dislikes video))
-         (author-id (ytel-show--video-author-id video))
-
-         ;; author
-         (author (alist-get 'author data))
-         (name (ytel-show--author-name author))
-         (author-thumbnail-data (ytel-show--author-thumbnail-data author))
-         (subs (ytel-show--author-subs author)))
+  (let-alist data
+    (ytel-show--draw-button "Previous" ytel-show-previous-button-map)
+    (insert "  -  ")
+    (ytel-show--draw-button "Next" ytel-show-next-button-map)
+    (insert "\n")
 
     (ytel-show--draw-url
-     (concat "https://www.youtube.com/watch?v=" id) (or title "no title"))
+     (concat "https://www.youtube.com/watch?v=" .id)
+     (or (ytel-show--video-title .video) "no title"))
     (insert "  -  ")
 
-    (when name
-      (ytel-show--draw-url (concat "https://www.youtube.com/channel/" author-id) name) (insert " "))
+    (when-let ((name (ytel-show--author-name .author))
+               (author-id (ytel-show--video-author-id .video)))
+      (ytel-show--draw-url (concat "https://www.youtube.com/channel/" author-id) name)
+      (insert " "))
 
-    (when subs
+    (when-let ((subs (ytel-show--author-subs .author)))
       (insert (ytel-show--format-author-subs subs) "\n"))
 
-    (when length
+    (when-let ((length (ytel-show--video-length .video)))
       (insert (ytel--format-video-length length) "  -  "))
 
-    (when published
+    (when-let ((published (ytel-show--video-published .video)))
       (insert (ytel--format-video-published published) "  -  "))
 
-    (when views
+    (when-let ((views (ytel-show--video-views .video)))
       (insert (ytel--format-video-views views) "  -  "))
 
-    (when (or likes dislikes)
-      (insert (ytel-show--format-video-likes-dislikes likes dislikes) "\n"))
+    (when-let ((likes (ytel-show--video-likes .video))
+               (dislikes (ytel-show--video-dislikes .video)))
+      (insert (ytel-show--format-video-likes-dislikes likes dislikes) "  -  "))
 
-    (when thumbnail-data
+    (ytel-show--draw-button "View comments" ytel-show-comments-button-map)
+    (insert "  -  ")
+    (ytel-show--draw-button "Close" ytel-show-close-button-map)
+    (insert "\n")
+
+    (when-let ((thumbnail-data (ytel-show--video-thumbnail-data .video)))
       (insert-image thumbnail-data) (insert "\n"))
 
-    (when description
+    (when-let ((description (ytel-show--video-description .video)))
       (insert description "\n"))
 
-    (when author-thumbnail-data
+    (when-let ((author-thumbnail-data (ytel-show--author-thumbnail-data .author)))
       (insert-image author-thumbnail-data) (insert "\n"))))
 
 
@@ -540,5 +589,270 @@ videos from `VIDEO-IDS'."
   (setq-local revert-buffer-function #'ytel-show-revert-buffer))
 
 (provide 'ytel-show)
+
+
+;;;; SHOW COMMENTS
+
+
+;;;;; TYPES
+
+(cl-defstruct (ytel-show-comments--comment
+               (:constructor ytel-show-comments--comment-create)
+               (:copier nil))
+  author author-id content published likes ownerp heart replies)
+
+
+;;;;; VARIABLES
+
+
+;;;;;; INTERNAL
+
+(defvar ytel-show-comments--authors-cache
+  (make-hash-table :test 'equal :size 100 :rehash-size 2.5)
+  "Cache used to store author thumbnails of comments.")
+
+
+;;;;;;; LOCAL
+
+(defvar-local ytel-show-comments--video-id nil
+  "Video id used it `YTEL-SHOW-COMMENTS-MODE'.")
+
+(defvar-local ytel-show-comments--video-title "video"
+  "Title used at the top of the buffer.")
+
+(defvar-local ytel-show-comments--history nil
+  "Stored pages of comments.")
+
+(defvar-local ytel-show-comments--comment-count nil
+  "Communt count.")
+
+
+;;;;;; MAPS
+
+(defvar ytel-show-comments-continuation-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "RET") #'ytel-show-comments-follow-continuation)
+    (define-key map (kbd "<mouse-2>") #'ytel-show-comments-follow-continuation)
+    map)
+  "Map used in continuation buttons.")
+
+(defvar ytel-show-comments-previous-page-button-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "RET") #'ytel-show-comments-previous-page)
+    (define-key map (kbd "<mouse-2>") #'ytel-show-comments-previous-page)
+    map)
+  "Map used in to switch to previous page.")
+
+(defvar ytel-show-comments-mode-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "l") #'ytel-show-comments-previous-page)
+    map)
+  "Map used by `YTEL-SHOW-COMMENTS-MODE'.")
+
+
+;;;;;; CUSTOM
+
+(defcustom ytel-show-comments-default-buffer-name "*ytel-show-comments*"
+  "Default buffer name for `YTEL-SHOW-COMMENTS-MODE'."
+  :type 'string
+  :group 'ytel-show)
+
+(defface ytel-show-comments-owner-face
+  '((t :inherit hl-line))
+  "Face used for owner's text."
+  :group 'ytel-show)
+
+
+;;;;; FUNCTIONS
+
+(defun ytel-show-comments--query-comments (id &optional continuation)
+  "Query invidious instance for comments of video identified by `ID'.
+If `CONTINUATION' is supplied, show continuation of comments."
+  (ytel-show--check-response-error
+   (ytel--API-call
+    (concat "comments/" id)
+    (when continuation `(("continuation" ,continuation))))))
+
+
+;;;;;; UPDATE
+
+(defun ytel-show-comments--parse-comment (response)
+  "Parse comment from `RESPONSE'.
+Return comment on success, or nil."
+  (when response
+    (let-alist response
+      (when (and .authorId (null (gethash .authorId ytel-show-comments--authors-cache)))
+        (when-let ((ytel-show--video-ids (vector ytel-show-comments--video-id))
+                   (thumbnail (ytel-show--process-thumbnails .authorThumbnails)))
+          (puthash .authorId thumbnail ytel-show-comments--authors-cache)))
+
+      (ytel-show-comments--comment-create
+       :author .author
+       :author-id .authorId
+       :content .content
+       :published .published
+       :likes .likeCount
+       :ownerp (when .authorIsChannelOwner (not (eq :json-false .authorIsChannelOwner)))
+       :heart .creatorHeart.creatorName
+       :replies (when .replies (cons .replies.replyCount .replies.continuation))))))
+
+(defun ytel-show-comments--add-to-history (id &optional continuation)
+  "Add new page to comments history.
+Comments are taken frome video `ID' and it's `CONTINUATION' (if supplied).
+Return '(comments . continuation) on success, or nil.  Comments is a sequence of
+`ytel-show-comments--comment' struct."
+  (when-let ((response (ytel-show-comments--query-comments id continuation)))
+    (let-alist response
+      (when .commentCount
+        (setf ytel-show-comments--comment-count .commentCount))
+      (when-let ((comments (seq-map #'ytel-show-comments--parse-comment .comments)))
+        (car (push (cons comments .continuation) ytel-show-comments--history))))))
+
+
+;;;;;; DATA
+
+(defun ytel-show-comments--comments-data (id)
+  "Get comment data by `ID' or download first page of videos comments.
+Return value is described in `YTEL-SHOW-COMMENTS--ADD-TO-HISTORY'."
+  (or (car ytel-show-comments--history)
+      (ytel-show-comments--add-to-history id)))
+
+
+;;;;;; DRAW
+
+(defun ytel-show-comments--format-owner (owner)
+  "Format `OWNER's text."
+  (propertize owner 'face 'ytel-show-comments-owner-face))
+
+(defun ytel-show-comments--draw (data)
+  "Draw comment `DATA' on buffer.
+`DATA' is a return value of `YTEL-SHOW-COMMENTS--COMMENTS-DATA'."
+  (when data
+    (cl-destructuring-bind (comments . continuation) data
+
+      (ytel-show--draw-url
+       (concat "https://www.youtube.com/watch?v=" ytel-show-comments--video-id)
+       ytel-show-comments--video-title)
+
+      (when ytel-show-comments--comment-count
+        (insert (format " (%s comments)\n" ytel-show-comments--comment-count)))
+
+      (let ((length (length ytel-show-comments--history)))
+        (insert (format "Page %s  -  " length))
+        (ytel-show--draw-button
+         (if (= 1 length) "Reload" "Go back")
+         ytel-show-comments-previous-page-button-map)
+        (insert "  -  "))
+
+      (ytel-show--draw-button "Close" ytel-show-close-button-map)
+      (insert "\n\n")
+
+      (seq-doseq (comment comments)
+        (when-let* ((author-id (ytel-show-comments--comment-author-id comment))
+                    (thumbnail (gethash author-id ytel-show-comments--authors-cache)))
+          (insert-image thumbnail))
+
+        (when-let ((name (ytel-show-comments--comment-author comment))
+                   (author-id (ytel-show-comments--comment-author-id comment)))
+          (insert " ")
+          (ytel-show--draw-url (concat "https://www.youtube.com/channel/" author-id) name))
+
+        (when-let ((published (ytel-show-comments--comment-published comment)))
+          (insert "  -  " (ytel--format-video-published published)))
+
+        (when-let ((likes (ytel-show-comments--comment-likes comment)))
+          (when (< 0 likes)
+            (insert "  -  " (ytel-show--format-video-likes-dislikes likes))))
+
+        (when-let ((ownerp (ytel-show-comments--comment-ownerp comment)))
+          (insert "  -  " (ytel-show-comments--format-owner "OWNER")))
+
+        (insert "\n")
+
+        (when-let ((content (ytel-show-comments--comment-content comment)))
+          (insert content "\n\n"))
+
+        (when-let ((heart (ytel-show-comments--comment-heart comment)))
+          (insert (ytel-show-comments--format-owner
+                   (concat heart " likes this comment"))
+                  "\n\n"))
+
+        (when-let ((replies (ytel-show-comments--comment-replies comment)))
+          (cl-destructuring-bind (count . continuation) replies
+            (when continuation
+              (ytel-show--draw-button
+               (format "View %s replies" count)
+               ytel-show-comments-continuation-map
+               'continuation continuation)
+              (insert "\n\n"))))
+
+        "\n")
+
+      (when continuation
+        (ytel-show--draw-button "View next page"
+                                ytel-show-comments-continuation-map
+                                'continuation continuation)
+        (insert "\n")))))
+
+
+;;;;; COMMANDS
+
+(defun ytel-show-comments-follow-continuation (continuation)
+  "Follow `CONTINUATION'.
+Add new page to history and load it.  This is used in buttons."
+  (interactive
+   (progn
+     (mouse-set-point last-nonmenu-event)
+     (if-let ((continuation (get-text-property (point) 'continuation)))
+         (list continuation)
+       (error "No continuation at point"))))
+  (message "Loading next page")
+  (ytel-show-comments--add-to-history ytel-show-comments--video-id continuation)
+  (ytel-show-comments-revert-buffer))
+
+(defun ytel-show-comments-previous-page ()
+  "Go to previous page in comments history."
+  (interactive)
+  (message "Loading previous page")
+  (pop ytel-show-comments--history)
+  (ytel-show-comments-revert-buffer))
+
+(defun ytel-show-comments-revert-buffer (&rest _)
+  "Revert current ytel-show-comments buffer."
+  (interactive)
+  (let ((inhibit-read-only t))
+    (message "Loading %s..." ytel-show-comments--video-id)
+    (erase-buffer)
+    (ytel-show-comments--draw
+     (ytel-show-comments--comments-data ytel-show-comments--video-id))
+    (goto-char (point-min))
+    (message "Showing %s..." ytel-show-comments--video-id)))
+
+(defun ytel-show-comments (id &optional title buffer)
+  "Entry function to show video `ID's comments.
+`TITLE' will be shown at the top of the buffer.  `BUFFER' is a name of the
+buffer the will be created.  If called interactively, these values are taken
+automatically from ytel-show buffer."
+  (interactive
+   (if (not (derived-mode-p 'ytel-show-mode))
+       (error "Not in the ytel-show buffer")
+     (let ((id (ytel-show--current-video-id)))
+       (list id (ytel-show--video-title (gethash id ytel-show--videos-cache))))))
+
+  (switch-to-buffer
+   (get-buffer-create (or buffer ytel-show-comments-default-buffer-name)))
+
+  (unless (derived-mode-p 'ytel-show-comments-mode)
+    (ytel-show-comments-mode))
+
+  (unless (string= ytel-show-comments--video-id id)
+    (when title (setq-local ytel-show-comments--video-title title))
+    (setq-local ytel-show-comments--video-id id ytel-show-comments--history nil))
+  (ytel-show-comments-revert-buffer))
+
+(define-derived-mode ytel-show-comments-mode special-mode "Ytel-Show-Comments"
+  "Mode for displaying youtube video comments."
+  :group 'ytel-show
+  (setq-local revert-buffer-function #'ytel-show-comments-revert-buffer))
 
 ;;; ytel-show.el ends here

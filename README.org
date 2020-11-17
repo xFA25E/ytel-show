@@ -5,6 +5,8 @@
 
   [[./ytel-show-screenshot-footer.png]]
 
+  [[./ytel-show-comments-screenshot.png]]
+
 * Easy setup
   #+begin_src emacs-lisp
     (define-key ytel-mode-map (kbd "RET") #'ytel-show)
@@ -19,15 +21,21 @@
   #+end_src
 
 * Usage
-  - /n|p/ :: switch videos
-  - /G/ :: recache video information
+** Ytel-Show
+   - /n|p/ :: switch videos
+   - /G/ :: recache video information
+** Ytel-Show-Comments
+   - /l/ :: go to previous page
+   - /g/ :: retry downloading failed page
 
 * Customization
-  Default buffer name: ~ytel-show-default-buffer-name~.
+  Default buffer name: ~ytel-show-default-buffer-name~,
+  ~ytel-show-comments-default-buffer-name~.
 
   Thumbnail sizes: ~ytel-show-image-max-width~, ~ytel-show-image-max-height~
 
-  Faces: ~ytel-show-video-likes-face~, ~ytel-show-author-subs-face~
+  Faces: ~ytel-show-video-likes-face~, ~ytel-show-author-subs-face~,
+  ~ytel-show-comments-owner-face~
 
 * Extensibility
   You can easily extend this package by giving ~ytel-show~ function a ~buffer~
@@ -35,11 +43,14 @@
   buffer.  For example: you could customize ~browse-url-browser-function~ to
   detect youtube video urls and display them using ~ytel-show~.
 
+  Same thing with ~ytel-show-comments~.  It takes ~id~, ~title~ and a ~buffer~.
 * Note
   Viewed videos are set with ~ytel-show~ command.  In order to load videos from
   other *ytel* pages, you should switch page in *ytel* buffer and call
   ~ytel-show~ again.
 
+  Same thing with ~ytel-show-comments~ command.  It sets all the necessary
+  information.
 * Caveats
   Sometimes json-reader will fail to parse a response from invidious instance or
   the connection will timeout.  You will see an almost empty buffer.  Usually,
@@ -48,10 +59,9 @@
   Sometimes invidous instance will send empty author thumbnail urls, so they
   will not be shown.
 
+  If the first comments page will fail to load, try hitting /g/.
+
   Currently, I don't have a solution for these problems.
 
 * Bugs
   If you find bugs, please, report it by writing an issue or send a PR.  Thanks!
-
-* Todo
-  - youtube comments
