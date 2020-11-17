@@ -308,37 +308,40 @@ Scale it to satisfy `YTEL-SHOW-IMAGE-MAX-WIDTH' and
 
 ;;;;;; UPDATE
 
-(defun ytel-show--update-video (video query-response)
+(defun ytel-show--update-video (video query-response &optional recache-images)
   "Update `VIDEO' struct with the data from `QUERY-RESPONSE'.
-Return updated `VIDEO'."
+If `RECACHE-IMAGES' is non-nil, redownload thumbnails.  Return updated `VIDEO'."
   (let-alist query-response
-    (when-let ((thumbnail (ytel-show--process-thumbnails .videoThumbnails)))
-      (setf (ytel-show--video-thumbnail-data video) thumbnail))
+    (when (or recache-images (null (ytel-show--video-thumbnail-data video)))
+      (when-let ((thumbnail (ytel-show--process-thumbnails .videoThumbnails)))
+        (setf (ytel-show--video-thumbnail-data video) thumbnail)))
 
-    (setf (ytel-show--video-title video) .title
-          (ytel-show--video-description video) .description
-          (ytel-show--video-published video) .published
-          (ytel-show--video-length video) .lengthSeconds
-          (ytel-show--video-views video) .viewCount
-          (ytel-show--video-likes video) .likeCount
-          (ytel-show--video-dislikes video) .dislikeCount
-          (ytel-show--video-author-id video) .authorId))
+    (when .title (setf (ytel-show--video-title video) .title))
+    (when .description (setf (ytel-show--video-description video) .description))
+    (when .published (setf (ytel-show--video-published video) .published))
+    (when .lengthSeconds (setf (ytel-show--video-length video) .lengthSeconds))
+    (when .viewCount (setf (ytel-show--video-views video) .viewCount))
+    (when .likeCount (setf (ytel-show--video-likes video) .likeCount))
+    (when .dislikeCount (setf (ytel-show--video-dislikes video) .dislikeCount))
+    (when .authorId (setf (ytel-show--video-author-id video) .authorId)))
   video)
 
-(defun ytel-show--update-author (author query-response)
+(defun ytel-show--update-author (author query-response &optional recache-images)
   "Update `AUTHOR' struct with the data from `QUERY-RESPONSE'.
 Return updated `AUTHOR'."
   (let-alist query-response
-    (when-let ((thumbnail (ytel-show--process-thumbnails .authorThumbnails)))
-      (setf (ytel-show--author-thumbnail-data author) thumbnail))
+    (when (or recache-images (null (ytel-show--author-thumbnail-data author)))
+     (when-let ((thumbnail (ytel-show--process-thumbnails .authorThumbnails)))
+      (setf (ytel-show--author-thumbnail-data author) thumbnail)))
 
-    (setf (ytel-show--author-name author) .author
-          (ytel-show--author-subs author) .subCountText))
+    (when .author (setf (ytel-show--author-name author) .author))
+    (when .subCountText (setf (ytel-show--author-subs author) .subCountText)))
   author)
 
-(defun ytel-show--update-cache (id)
+(defun ytel-show--update-cache (id &optional recache-images)
   "Update cached data by video `ID'.
-Return an alist with the following keys:
+If `RECACHE-IMAGES' is non-nil, redownlaod thumbnails.  Return an alist with the
+following keys:
 
   id - video `ID'
 
@@ -350,13 +353,13 @@ Return an alist with the following keys:
                  (or (gethash id ytel-show--videos-cache)
                      (puthash id (ytel-show--video-create)
                               ytel-show--videos-cache))
-                 query-response))
+                 query-response recache-images))
          (author-id (ytel-show--video-author-id video))
          (author (ytel-show--update-author
                   (or (gethash author-id ytel-show--authors-cache)
                       (puthash author-id (ytel-show--author-create)
                                ytel-show--authors-cache))
-                  query-response)))
+                  query-response recache-images)))
     `((id . ,id) (video . ,video) (author . ,author))))
 
 (defun ytel-show--update-index (add &optional cycle)
@@ -492,11 +495,12 @@ With overflow, cycle if `CYCLE' is provided."
         (message "Wall! Use argument to cycle!")
       (ytel-show-revert-buffer))))
 
-(defun ytel-show-reload-video-data ()
-  "Recache current video's data and redraw the current buffer."
-  (interactive)
+(defun ytel-show-reload-video-data (&optional recache-images)
+  "Recache current video's data and redraw the current buffer.
+If `RECACHE-IMAGES' is non-nil, redownload thumbnails."
+  (interactive "P")
   (message "Reloading %s..." (ytel-show--current-video-id))
-  (ytel-show--update-cache (ytel-show--current-video-id))
+  (ytel-show--update-cache (ytel-show--current-video-id) recache-images)
   (ytel-show-revert-buffer))
 
 ;;;###autoload
