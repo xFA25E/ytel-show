@@ -23,9 +23,9 @@
 
 ;;; Commentary:
 
-;; Ytel-Show: view youtube video information in Emacs
+;; Ytel-Show: browse youtube video in Emacs
 ;;
-;; This package is dependent on `YTEL' package.
+;; This package relies on `YTEL' package to fetch information.
 ;;
 ;;
 ;; Easy setup:
