@@ -152,34 +152,6 @@
 
 ;;;;;; MAPS
 
-(defvar ytel-show-previous-button-map
-  (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "RET") #'ytel-show-previous-video)
-    (define-key map (kbd "<mouse-2>") #'ytel-show-previous-video)
-    map)
-  "Keymap for a button that switches to previous video.")
-
-(defvar ytel-show-next-button-map
-  (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "RET") #'ytel-show-next-video)
-    (define-key map (kbd "<mouse-2>") #'ytel-show-next-video)
-    map)
-  "Keymap for a button that switches to next video.")
-
-(defvar ytel-show-close-button-map
-  (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "RET") #'quit-window)
-    (define-key map (kbd "<mouse-2>") #'quit-window)
-    map)
-  "Keymap for a button that closes a window.")
-
-(defvar ytel-show-comments-button-map
-  (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "RET") #'ytel-show-comments)
-    (define-key map (kbd "<mouse-2>") #'ytel-show-comments)
-    map)
-  "Keymap for a button that shows video comments.")
-
 (defvar ytel-show-mode-map
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "n") #'ytel-show-next-video)
@@ -440,16 +412,11 @@ described in `YTEL-SHOW--UPDATE-CACHE'."
      point (point)
      'follow-link t 'mouse-face 'highlight 'shr-url url 'keymap shr-map)))
 
-(defun ytel-show--draw-button (title map &rest props)
-  "Draw a `TITLE' button with `MAP' and `PROPS'."
+(defun ytel-show--draw-button (title action &rest props)
+  "Draw a `TITLE' button with `ACTION'."
   (let ((point (point)))
     (insert title)
-    (apply #'make-text-button
-           point (point)
-           'follow-link t
-           'mouse-face 'highlight
-           'keymap map
-           props)))
+    (apply #'make-text-button point (point) 'follow-link t 'action action props)))
 
 (defun ytel-show--format-video-likes-dislikes (likes &optional dislikes)
   "Format `LIKES' and `DISLIKES' before inserting them to buffer."
@@ -466,9 +433,9 @@ described in `YTEL-SHOW--UPDATE-CACHE'."
   "Draw video `DATA' to the buffer.
 `DATA' is the value returned from `YTEL-SHOW--VIDEO-DATA'."
   (let-alist data
-    (ytel-show--draw-button "Previous" ytel-show-previous-button-map)
+    (ytel-show--draw-button "Previous" '(lambda (_) (ytel-show-previous-video)))
     (insert "  -  ")
-    (ytel-show--draw-button "Next" ytel-show-next-button-map)
+    (ytel-show--draw-button "Next" '(lambda (_) (ytel-show-next-video)))
     (insert "\n")
 
     (ytel-show--draw-url
@@ -497,9 +464,9 @@ described in `YTEL-SHOW--UPDATE-CACHE'."
                (dislikes (ytel-show--video-dislikes .video)))
       (insert (ytel-show--format-video-likes-dislikes likes dislikes) "  -  "))
 
-    (ytel-show--draw-button "View comments" ytel-show-comments-button-map)
+    (ytel-show--draw-button "View comments" '(lambda (_) (call-interactively 'ytel-show-comments)))
     (insert "  -  ")
-    (ytel-show--draw-button "Close" ytel-show-close-button-map)
+    (ytel-show--draw-button "Close" '(lambda (_) (quit-window)))
     (insert "\n")
 
     (when-let ((thumbnail-data (ytel-show--video-thumbnail-data .video)))
@@ -631,20 +598,6 @@ videos from `VIDEO-IDS'."
 
 ;;;;;; MAPS
 
-(defvar ytel-show-comments-continuation-map
-  (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "RET") #'ytel-show-comments-follow-continuation)
-    (define-key map (kbd "<mouse-2>") #'ytel-show-comments-follow-continuation)
-    map)
-  "Map used in continuation buttons.")
-
-(defvar ytel-show-comments-previous-page-button-map
-  (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "RET") #'ytel-show-comments-previous-page)
-    (define-key map (kbd "<mouse-2>") #'ytel-show-comments-previous-page)
-    map)
-  "Map used in to switch to previous page.")
-
 (defvar ytel-show-comments-mode-map
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "l") #'ytel-show-comments-previous-page)
@@ -743,10 +696,10 @@ Return value is described in `YTEL-SHOW-COMMENTS--ADD-TO-HISTORY'."
         (insert (format "Page %s  -  " length))
         (ytel-show--draw-button
          (if (= 1 length) "Reload" "Go back")
-         ytel-show-comments-previous-page-button-map)
+         '(lambda (_) (ytel-show-comments-previous-page)))
         (insert "  -  "))
 
-      (ytel-show--draw-button "Close" ytel-show-close-button-map)
+      (ytel-show--draw-button "Close" '(lambda (_) (quit-window)))
       (insert "\n\n")
 
       (seq-doseq (comment comments)
@@ -784,32 +737,29 @@ Return value is described in `YTEL-SHOW-COMMENTS--ADD-TO-HISTORY'."
             (when continuation
               (ytel-show--draw-button
                (format "View %s replies" count)
-               ytel-show-comments-continuation-map
+               #'ytel-show-comments--follow-continuation
                'continuation continuation)
               (insert "\n\n"))))
 
         "\n")
 
       (when continuation
-        (ytel-show--draw-button "View next page"
-                                ytel-show-comments-continuation-map
-                                'continuation continuation)
+        (ytel-show--draw-button
+         "View next page"
+         #'ytel-show-comments--follow-continuation
+         'continuation continuation)
         (insert "\n")))))
 
 
 ;;;;; COMMANDS
 
-(defun ytel-show-comments-follow-continuation (continuation)
+(defun ytel-show-comments--follow-continuation (button)
   "Follow `CONTINUATION'.
 Add new page to history and load it.  This is used in buttons."
-  (interactive
-   (progn
-     (mouse-set-point last-nonmenu-event)
-     (if-let ((continuation (get-text-property (point) 'continuation)))
-         (list continuation)
-       (error "No continuation at point"))))
   (message "Loading next page")
-  (ytel-show-comments--add-to-history ytel-show-comments--video-id continuation)
+  (if-let ((continuation (button-get button 'continuation)))
+      (ytel-show-comments--add-to-history ytel-show-comments--video-id continuation)
+    (error "no continuation in button"))
   (ytel-show-comments-revert-buffer))
 
 (defun ytel-show-comments-previous-page ()
