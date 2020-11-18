@@ -663,6 +663,15 @@ Return '(comments . continuation) on success, or nil.  Comments is a sequence of
       (when-let ((comments (seq-map #'ytel-show-comments--parse-comment .comments)))
         (car (push (cons comments .continuation) ytel-show-comments--history))))))
 
+(defun ytel-show-comments--follow-continuation (button)
+  "Follow `CONTINUATION'.
+Add new page to history and load it.  This is used in buttons."
+  (message "Loading next page")
+  (if-let ((continuation (button-get button 'continuation)))
+      (ytel-show-comments--add-to-history ytel-show-comments--video-id continuation)
+    (error "no continuation in button"))
+  (ytel-show-comments-revert-buffer))
+
 
 ;;;;;; DATA
 
@@ -752,15 +761,6 @@ Return value is described in `YTEL-SHOW-COMMENTS--ADD-TO-HISTORY'."
 
 
 ;;;;; COMMANDS
-
-(defun ytel-show-comments--follow-continuation (button)
-  "Follow `CONTINUATION'.
-Add new page to history and load it.  This is used in buttons."
-  (message "Loading next page")
-  (if-let ((continuation (button-get button 'continuation)))
-      (ytel-show-comments--add-to-history ytel-show-comments--video-id continuation)
-    (error "no continuation in button"))
-  (ytel-show-comments-revert-buffer))
 
 (defun ytel-show-comments-previous-page ()
   "Go to previous page in comments history."
