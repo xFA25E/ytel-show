@@ -90,6 +90,8 @@
 ;;
 ;; If the first comments page will fail to load, try hitting /g/.
 ;;
+;; If nothing of the above helps, change invidious instance.
+;;
 ;; Currently, I don't have a solution for these problems.
 
 ;;; Code:
