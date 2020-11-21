@@ -522,7 +522,7 @@ If `RECACHE-IMAGES' is non-nil, redownload thumbnails."
   (ytel-show-revert-buffer))
 
 ;;;###autoload
-(defun ytel-show (video-ids index &optional buffer)
+(cl-defun ytel-show (video-ids &optional (index 0) (buffer ytel-show-default-buffer-name))
   "Show video information in the Ytel-Show buffer.
 This is the main entry function for this package.  Interactively, it must be
 called from a `YTEL' buffer.
@@ -544,9 +544,7 @@ videos from `VIDEO-IDS'."
                (integerp index) (<= 0 index (1- (length video-ids))))
     (error "Invalid arguments to `YTEL-SHOW'"))
 
-  (switch-to-buffer
-   (get-buffer-create (or buffer ytel-show-default-buffer-name)))
-
+  (switch-to-buffer (get-buffer-create buffer))
   (unless (derived-mode-p 'ytel-show-mode)
     (ytel-show-mode))
   (setq-local ytel-show--video-ids video-ids ytel-show--index index)
